@@ -19,6 +19,11 @@
             <input type="text" id="query" placeholder="Enter query...">
         </div>
 
+        <div class="menu-group" id="objectGroup" style="display:none;">
+            <label>Object Label</label>
+            <input type="text" id="objectLabel" placeholder="e.g. person, car, phone">
+        </div>
+
         <div class="menu-group">
             <label>Video ID (for in-video search)</label>
             <input type="text" id="videoId" placeholder="e.g. video_01">
@@ -34,9 +39,10 @@
 
         <div class="menu-group">
             <label>Search Mode</label>
-            <select id="searchMode">
+            <select id="searchMode" onchange="onModeChange()">
                <option value="clip">CLIP Search (L14)</option>
                <option value="viclip">ViCLIP Search</option>
+               <option value="object_clip">Object + CLIP Search</option>
                <option value="clip_in_video">CLIP Search in one Video</option>
                <option value="ocr">OCR Search</option>
                <option value="audio">Audio Search</option>
