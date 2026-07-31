@@ -5,6 +5,22 @@ let currentContext = [];
 let currentCenterTime = null;
 
 /* =========================
+   MODE CHANGE (show/hide Object Label input)
+========================= */
+
+function onModeChange() {
+
+    const mode = document.getElementById("searchMode").value;
+    const objectGroup = document.getElementById("objectGroup");
+
+    if (mode === "object_clip") {
+        objectGroup.style.display = "block";
+    } else {
+        objectGroup.style.display = "none";
+    }
+}
+
+/* =========================
    SEARCH MAIN
 ========================= */
 
@@ -18,6 +34,7 @@ async function search(page = 1) {
     const mode = document.getElementById("searchMode").value;
     const topk = document.getElementById("topk").value;
     const videoId = document.getElementById("videoId").value.trim();
+    const objectLabel = document.getElementById("objectLabel").value.trim();
 
     let url = "";
     let params = new URLSearchParams();
@@ -34,6 +51,17 @@ async function search(page = 1) {
 
         case "viclip":
             url = "/video-search";
+            break;
+
+        case "object_clip":
+
+            if (!objectLabel) {
+                alert("Please enter Object Label");
+                return;
+            }
+
+            url = "/object-clip";
+            params.append("object", objectLabel);
             break;
 
         case "clip_in_video":
@@ -114,34 +142,35 @@ function renderResults(results) {
         /* ======================
            AUDIO
         ====================== */
-
         if (mode === "audio") {
 
-            card.innerHTML = `
-                <div class="info">
-                    <p><b>${item.video}</b></p>
-                    <p>${item.start.toFixed(2)} - ${item.end.toFixed(2)}</p>
-                    <p>${item.text}</p>
-                </div>
-            `;
+          const thumbnail = `http://127.0.0.1:5000${item.thumbnail}`;
 
-            card.onclick = () => playAudio(item);
+          card.innerHTML = `
+            <img class="thumb" src="${thumbnail}" alt="thumbnail">
+            <div class="info">
+               <p><b>${item.video}</b></p>
+               <p>${item.start.toFixed(2)} - ${item.end.toFixed(2)}</p>
+               <p>${item.text}</p>
+            </div>
+         `;
+  
+          card.onclick = () => playAudio(item);
         }
 
         /* ======================
            ViCLIP
         ====================== */
-
         else if (mode === "viclip") {
 
-             const thumbnail = `http://127.0.0.1:5000/data/${item.thumbnail}`;
+            const thumbnail = `http://127.0.0.1:5000/data/${item.thumbnail}`;
 
             card.innerHTML = `
-                 <img class="thumb" src="${thumbnail}" alt="thumbnail">
+                <img class="thumb" src="${thumbnail}" alt="thumbnail">
                 <div class="info">
-                   <p><b>${item.video}</b></p>
-                   <p>${item.start}s - ${item.end}s</p>
-                   <p>Score: ${item.score}</p>
+                    <p><b>${item.video}</b></p>
+                    <p>${item.start}s - ${item.end}s</p>
+                    <p>Score: ${item.score.toFixed(4)}</p>
                 </div>
             `;
 
@@ -149,9 +178,48 @@ function renderResults(results) {
         }
 
         /* ======================
-           Frame Search
+           OBJECT + CLIP SEARCH
         ====================== */
+        else if (mode === "object_clip") {
 
+            const frame = `http://127.0.0.1:5000${item.frame}`;
+
+            let objectHTML = "";
+
+            if (item.objects && item.objects.length > 0) {
+
+                objectHTML = item.objects
+                    .map(obj =>
+                        `<span>
+                            ${obj.label}
+                            (${obj.score.toFixed(2)})
+                        </span>`
+                    )
+                    .join("<br>");
+
+            }
+
+            card.innerHTML = `
+                <img src="${frame}">
+                <div class="info">
+                    <p><b>${item.video}</b></p>
+                    <p>${item.timestamp}s</p>
+                    ${item.score !== undefined ? `<p>Score: ${item.score.toFixed(4)}</p>` : ""}
+                    <p>${objectHTML}</p>
+                </div>
+            `;
+
+            card.onclick = () => {
+
+                jumpToTime(item);
+                loadContext(item);
+
+            };
+        }
+
+        /* ======================
+           CLIP / OCR
+        ====================== */
         else {
 
             const frame = `http://127.0.0.1:5000${item.frame}`;
@@ -161,13 +229,16 @@ function renderResults(results) {
                 <div class="info">
                     <p><b>${item.video}</b></p>
                     <p>${item.timestamp}s</p>
+                    ${item.score !== undefined ? `<p>Score: ${item.score.toFixed(4)}</p>` : ""}
+
+                    <!-- ${item.ocr ? `<p>${item.ocr}</p>` : ""} -->  
+
                 </div>
             `;
 
             card.onclick = () => {
 
                 jumpToTime(item);
-
                 loadContext(item);
 
             };
@@ -261,7 +332,7 @@ function renderContext(frames) {
         card.innerHTML = `
             <img src="${frame}">
             <div class="info">
-                <p>${item.video}</p>
+                <p><b>${item.video}</b></p>
                 <p>${item.timestamp}s</p>
             </div>
         `;
@@ -311,3 +382,11 @@ function jumpToTime(item) {
     };
 
 }
+
+/* =========================
+   INIT
+========================= */
+
+window.onload = () => {
+    onModeChange();
+};
