@@ -46,6 +46,15 @@ body{
     color:white;
 }
 
+/* Ô Object Label (chỉ hiện khi chọn mode Object + CLIP) */
+#objectGroup{
+    transition: opacity .2s ease;
+}
+
+#objectGroup input{
+    border:1px solid #2563eb;
+}
+
 .sidebar button{
     width:100%;
     padding:12px;
