@@ -2,45 +2,63 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 from search import (
-    search_clip_api,
-    search_clip_video_api,
+    search_video_api,
     search_ocr_api,
     search_audio_api,
     get_clip_context_api,
-    search_clip_in_one_video
+    pick_search_modes,
+    search_segment_router,
 )
 
 app = Flask(__name__)
 CORS(app)
 
 # ==========================
-# CLIP IN ONE VIDEO SEARCH
+# CHAT-LIKE SEARCH ROUTER
 # ==========================
-@app.route("/clip/in-video")
-def clip_in_video_route():
-
+@app.route("/chat")
+def chat_route():
     query = request.args.get("q", "")
-    video_id = request.args.get("video", "")
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("topk", 50))
 
-    if not query or not video_id:
-        return jsonify({
-            "error": "q and video are required"
-        }), 400
+    if not query:
+        return jsonify({"query": query, "page": page, "page_size": page_size, "total": 0, "total_pages": 1, "results": []})
 
-    result = search_clip_in_one_video(
-        query=query,
-        video_id=video_id,
-        page=page,
-        page_size=page_size
-    )
+    modes = pick_search_modes(query)
+    results = search_segment_router(query, k=200)
+    paged = {
+        "page": page,
+        "page_size": page_size,
+        "total": len(results),
+        "total_pages": max(1, (len(results) + page_size - 1) // page_size),
+        "results": results[(page - 1) * page_size: page * page_size]
+    }
 
-    return jsonify(result)
+    output = []
+    for item in paged["results"]:
+        output.append({
+            "video": item.get("video"),
+            "start": item.get("start"),
+            "end": item.get("end"),
+            "score": round(float(item.get("score", 0)), 4),
+            "summary": item.get("summary", ""),
+            "frames": item.get("frames", []),
+            "source": item.get("source", "video"),
+            "selected_modes": modes,
+        })
 
-# ==========================
-# CLIP SEARCH
-# ==========================
+    return jsonify({
+        "query": query,
+        "page": paged["page"],
+        "page_size": paged["page_size"],
+        "total": paged["total"],
+        "total_pages": paged["total_pages"],
+        "selected_modes": modes,
+        "results": output,
+    })
+
+
 @app.route("/search")
 def search_route():
 
@@ -48,7 +66,7 @@ def search_route():
     page = int(request.args.get("page", 1))
     page_size = int(request.args.get("topk", 50))
 
-    result = search_clip_api(
+    result = search_video_api(
         query=query,
         page=page,
         page_size=page_size
@@ -56,23 +74,6 @@ def search_route():
 
     return jsonify(result)
 
-# ==========================
-# VIDEO CLIP SEARCH (ViCLIP)
-# ==========================
-@app.route("/video-search")
-def video_search_route():
-
-    query = request.args.get("q", "")
-    page = int(request.args.get("page", 1))
-    page_size = int(request.args.get("topk", 50))
-
-    result = search_clip_video_api(
-        query=query,
-        page=page,
-        page_size=page_size
-    )
-
-    return jsonify(result)
 # ==========================
 # CLIP CONTEXT (CLICK FRAME)
 # ==========================

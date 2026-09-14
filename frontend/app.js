@@ -5,22 +5,6 @@ let currentContext = [];
 let currentCenterTime = null;
 
 /* =========================
-   MODE CHANGE (show/hide Object Label input)
-========================= */
-
-function onModeChange() {
-
-    const mode = document.getElementById("searchMode").value;
-    const objectGroup = document.getElementById("objectGroup");
-
-    if (mode === "object_clip") {
-        objectGroup.style.display = "block";
-    } else {
-        objectGroup.style.display = "none";
-    }
-}
-
-/* =========================
    SEARCH MAIN
 ========================= */
 
@@ -31,61 +15,20 @@ async function search(page = 1) {
     currentCenterTime = null;
 
     const query = document.getElementById("query").value.trim();
-    const mode = document.getElementById("searchMode").value;
     const topk = document.getElementById("topk").value;
-    const videoId = document.getElementById("videoId").value.trim();
-    const objectLabel = document.getElementById("objectLabel").value.trim();
 
-    let url = "";
-    let params = new URLSearchParams();
+    if (!query) {
+        alert("Please enter a search query");
+        return;
+    }
 
+    const params = new URLSearchParams();
     params.append("q", query);
     params.append("page", page);
     params.append("topk", topk);
 
-    switch (mode) {
-
-        case "clip":
-            url = "/search";
-            break;
-
-        case "viclip":
-            url = "/video-search";
-            break;
-
-        case "object_clip":
-
-            if (!objectLabel) {
-                alert("Please enter Object Label");
-                return;
-            }
-
-            url = "/object-clip";
-            params.append("object", objectLabel);
-            break;
-
-        case "clip_in_video":
-
-            if (!videoId) {
-                alert("Please enter Video ID");
-                return;
-            }
-
-            url = "/clip/in-video";
-            params.append("video", videoId);
-            break;
-
-        case "ocr":
-            url = "/ocr";
-            break;
-
-        case "audio":
-            url = "/audio";
-            break;
-    }
-
     const res = await fetch(
-        `http://127.0.0.1:5000${url}?${params}`
+        `http://127.0.0.1:5000/chat?${params}`
     );
 
     const data = await res.json();
@@ -127,149 +70,54 @@ function renderResults(results) {
     const gallery = document.getElementById("results");
     gallery.innerHTML = "";
 
-    const mode = document.getElementById("searchMode").value;
-
     if (!results.length) {
         gallery.innerHTML = "<p>No results</p>";
         return;
     }
 
-    results.forEach(item => {
+    results.forEach((item, index) => {
 
         const card = document.createElement("div");
-        card.className = "result";
+        card.className = "result video-card";
 
-        /* ======================
-           AUDIO
-        ====================== */
-        if (mode === "audio") {
+        const frame = (item.frames && item.frames.length) ? `http://127.0.0.1:5000${item.frames[0]}` : "";
+        const summary = item.summary ? item.summary.slice(0, 180) : "No description available";
+        const modeLabel = item.source || "video";
 
-          const thumbnail = `http://127.0.0.1:5000${item.thumbnail}`;
+        card.innerHTML = `
+           <div class="video-thumb-wrap">
+               <img src="${frame}" alt="${item.video}">
+               <span class="video-rank">#${index + 1}</span>
+               <span class="video-score">${item.score !== undefined ? item.score.toFixed(4) : "0.0000"}</span>
+           </div>
+           <div class="info">
+               <div class="video-meta-row">
+                   <span class="video-pill">${modeLabel}</span>
+                   <h3>${item.video}</h3>
+               </div>
+               <p><b>Time:</b> ${Number(item.start).toFixed(1)}s - ${Number(item.end).toFixed(1)}s</p>
+               <p class="video-summary">${summary}</p>
+           </div>
+        `;
 
-          card.innerHTML = `
-            <img class="thumb" src="${thumbnail}" alt="thumbnail">
-            <div class="info">
-               <p><b>${item.video}</b></p>
-               <p>${item.start.toFixed(2)} - ${item.end.toFixed(2)}</p>
-               <p>${item.text}</p>
-            </div>
-         `;
-  
-          card.onclick = () => playAudio(item);
-        }
-
-        /* ======================
-           ViCLIP
-        ====================== */
-        else if (mode === "viclip") {
-
-            const thumbnail = `http://127.0.0.1:5000/data/${item.thumbnail}`;
-
-            card.innerHTML = `
-                <img class="thumb" src="${thumbnail}" alt="thumbnail">
-                <div class="info">
-                    <p><b>${item.video}</b></p>
-                    <p>${item.start}s - ${item.end}s</p>
-                    <p>Score: ${item.score.toFixed(4)}</p>
-                </div>
-            `;
-
-            card.onclick = () => playVideoClip(item);
-        }
-
-        /* ======================
-           OBJECT + CLIP SEARCH
-        ====================== */
-        else if (mode === "object_clip") {
-
-            const frame = `http://127.0.0.1:5000${item.frame}`;
-
-            let objectHTML = "";
-
-            if (item.objects && item.objects.length > 0) {
-
-                objectHTML = item.objects
-                    .map(obj =>
-                        `<span>
-                            ${obj.label}
-                            (${obj.score.toFixed(2)})
-                        </span>`
-                    )
-                    .join("<br>");
-
-            }
-
-            card.innerHTML = `
-                <img src="${frame}">
-                <div class="info">
-                    <p><b>${item.video}</b></p>
-                    <p>${item.timestamp}s</p>
-                    ${item.score !== undefined ? `<p>Score: ${item.score.toFixed(4)}</p>` : ""}
-                    <p>${objectHTML}</p>
-                </div>
-            `;
-
-            card.onclick = () => {
-
-                jumpToTime(item);
-                loadContext(item);
-
-            };
-        }
-
-        /* ======================
-           CLIP / OCR
-        ====================== */
-        else {
-
-            const frame = `http://127.0.0.1:5000${item.frame}`;
-
-            card.innerHTML = `
-                <img src="${frame}">
-                <div class="info">
-                    <p><b>${item.video}</b></p>
-                    <p>${item.timestamp}s</p>
-                    ${item.score !== undefined ? `<p>Score: ${item.score.toFixed(4)}</p>` : ""}
-
-                    <!-- ${item.ocr ? `<p>${item.ocr}</p>` : ""} -->  
-
-                </div>
-            `;
-
-            card.onclick = () => {
-
-                jumpToTime(item);
-                loadContext(item);
-
-            };
-        }
+        card.onclick = () => {
+           if (item.frames && item.frames.length > 0) {
+               const firstFrame = item.frames[0];
+               const player = document.getElementById("videoPlayer");
+               player.src = `http://127.0.0.1:5000/data/clips/${item.video}.mp4`;
+               player.load();
+               player.onloadedmetadata = () => {
+                   player.currentTime = Number(item.start || 0);
+                   player.play();
+               };
+           }
+        };
 
         gallery.appendChild(card);
-
     });
 
 }
 
-/* =========================
-   ViCLIP PLAYER
-========================= */
-
-function playVideoClip(item) {
-
-    const player = document.getElementById("videoPlayer");
-
-    player.src = `http://127.0.0.1:5000/data/${item.path}`;
-
-    player.load();
-
-    player.onloadedmetadata = () => {
-
-        // Clip đã được cắt sẵn nên bắt đầu từ đầu clip
-        player.currentTime = 0;
-        player.play();
-
-    };
-}
 /* =========================
    AUDIO
 ========================= */
@@ -388,5 +236,5 @@ function jumpToTime(item) {
 ========================= */
 
 window.onload = () => {
-    onModeChange();
+    updatePagination();
 };
