@@ -1,0 +1,16 @@
+.git
+.gitignore
+README.md
+*.md
+*.ipynb
+
+video/
+frontend/
+backend/
+
+# data/clips and data/bin are bind-mounted at runtime, not baked into the image
+data/
+
+__pycache__/
+*.pyc
+.venv/

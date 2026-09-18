@@ -1,0 +1,17 @@
+services:
+  ocr:
+    build:
+      context: .
+      dockerfile: Dockerfile.ocr
+    image: doan-ocr-processing:latest
+    container_name: doan-ocr-processing
+    volumes:
+      - ./data/clips:/app/data/clips:ro
+      - ./data/bin:/app/data/bin
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

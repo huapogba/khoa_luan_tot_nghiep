@@ -1,0 +1,10 @@
+video/
+data/
+*.mp4
+*.avi
+*.mov
+*.bin
+*.pt
+*.pth
+*.onnx
+__pycache__/

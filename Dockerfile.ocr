@@ -1,0 +1,40 @@
+# Dedicated container for ocr_processing.py.
+#
+# Kept separate from the audio/video pipelines (faster-whisper, torch,
+# transformers, qwen ...) because PaddleOCR/PaddlePaddle pin their own
+# numpy/opencv versions that clash with those. Running it in its own
+# image means `pip install` here can never break the other scripts'
+# environments (or vice versa).
+#
+# GPU build (default, matches use_gpu=True in ocr_processing.py):
+#   docker compose -f docker-compose.ocr.yml build
+#   docker compose -f docker-compose.ocr.yml run --rm ocr
+#
+# Requires the NVIDIA Container Toolkit on the host (Docker Desktop:
+# enable GPU support in Settings > Resources > WSL Integration + a
+# recent driver). Without a GPU, build with:
+#   docker build -f Dockerfile.ocr --build-arg BASE_IMAGE=paddlepaddle/paddle:2.6.1 -t ocr-processing:cpu .
+# and edit ocr_processing.py's `use_gpu=True` to `use_gpu=False` first
+# (PaddleOCR raises if use_gpu=True on a CPU-only paddlepaddle build).
+
+ARG BASE_IMAGE=paddlepaddle/paddle:2.6.1-gpu-cuda11.7-cudnn8.4-trt8.4
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+
+# libgl1/libglib2.0-0: required by opencv-python for video decoding (headless
+# wheel still dlopen's them); ffmpeg: same video codecs used elsewhere in the repo.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+        ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-ocr.txt .
+RUN pip install --no-cache-dir -r requirements-ocr.txt
+
+COPY ocr_processing.py .
+
+# data/clips (input) and data/bin (output) are bind-mounted at run time,
+# see docker-compose.ocr.yml -- not baked into the image.
+CMD ["python", "ocr_processing.py"]
