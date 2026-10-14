@@ -8,3 +8,10 @@ data/
 *.pth
 *.onnx
 __pycache__/
+# dữ liệu lớn
+TextVR_data/Video/
+TextVR_data/Kwai_VideoOCR/
+multivent_base/
+*.part
+.DS_Store
+

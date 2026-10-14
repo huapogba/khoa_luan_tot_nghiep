@@ -30,7 +30,7 @@ from paddleocr import PaddleOCR
 # =========================
 # CONFIGURATION
 # =========================
-CLIPS_DIR = Path("multivent_base")
+CLIPS_DIR = Path("TextVR_data/Video")                    # folder holding the clips to OCR (used as-is, no cutting)
 DATASET_JSON = Path("multivent_base.json")     # provides the `language` of each video_id
 OUTPUT_METADATA = Path("data/bin/metadata_new_ocr.json")
 

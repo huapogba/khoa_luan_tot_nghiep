@@ -7,6 +7,8 @@ services:
     container_name: doan-ocr-processing
     volumes:
       - ./data/clips:/app/data/clips:ro
+      - ./multivent_base:/app/multivent_base:ro
+      - ./multivent_base.json:/app/multivent_base.json:ro
       - ./data/bin:/app/data/bin
     deploy:
       resources:

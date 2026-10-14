@@ -39,10 +39,10 @@ from tqdm import tqdm
 # =========================
 # CONFIGURATION
 # =========================
-CLIPS_DIR = Path("multivent_base")                    # folder holding the videos to index (used as-is, no cutting)
-OUTPUT_INDEX = Path("data/bin/index_new_512.faiss")        # FAISS flat index output
-OUTPUT_METADATA = Path("data/bin/metadata_new_512.json")   # metadata output, same row order as the index
-THUMBS_DIR = Path("data/bin/thumbnails")           # only used if the "video" modality fallback kicks in
+CLIPS_DIR = Path("TextVR_data/Video/test")                    # folder holding the videos to index (used as-is, no cutting)
+OUTPUT_INDEX = Path("data/bin/index_textVR.faiss")        # FAISS flat index output
+OUTPUT_METADATA = Path("data/bin/metadata_textVR.json")   # metadata output, same row order as the index
+THUMBS_DIR = Path("data/bin/thumbnails_textVR")           # only used if the "video" modality fallback kicks in
 
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 

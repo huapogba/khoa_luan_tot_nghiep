@@ -6,7 +6,6 @@ Hướng dẫn ngắn gọn để cài môi trường và chạy 3 script xử l
 data/
 ├── videos/   # video gốc (input cho audio_processing.py)
 ├── clips/    # clip đã cắt theo đoạn thoại (output của audio_processing.py, input của video_processing.py và ocr_processing.py)
-├── audio/    # audio .mp3 tách ra từ video (output trung gian của audio_processing.py)
 └── bin/      # kết quả cuối: metadata_audio.json, metadata_ocr.json, index.faiss, metadata.json
 ```
 
@@ -24,7 +23,7 @@ data/
 Các script phụ thuộc nhau qua thư mục `data/`, nên chạy theo thứ tự:
 
 1. Bỏ video gốc vào `data/videos/`
-2. `audio_processing.py` — tách audio, nhận diện đoạn thoại (VAD), cắt video thành clip theo từng câu vào `data/clips/`, sinh transcript
+2. `audio_processing.py` — nhận diện các câu nói trong từng video (VAD + Whisper), ghi transcript kèm score và timestamp; không cắt video
 3. `video_processing.py` — đọc clip trong `data/clips/`, encode thành vector, build FAISS index
 4. `ocr_processing.py` — đọc clip trong `data/clips/`, chạy OCR trên từng clip
 
@@ -34,7 +33,7 @@ Bước 3 và 4 độc lập với nhau, có thể chạy song song/theo thứ t
 
 ### 3.1. audio_processing.py
 
-Tách audio bằng ffmpeg, phiên âm bằng faster-whisper (VAD tự động bỏ khoảng lặng), cắt clip video theo từng đoạn thoại, xuất `data/bin/metadata_audio.json` (mỗi entry có `start`, `end`, `audio`, `score`).
+Giải mã audio trực tiếp từ video (không tạo file trung gian), phiên âm bằng faster-whisper (VAD tự động bỏ khoảng lặng), xuất `data/bin/metadata_audio.json` với mỗi video một entry, cùng định dạng với OCR: `audio` (toàn bộ transcript) và `audio_phrases` (danh sách `{text, score, start, end}` cho từng câu).
 
 ```bash
 python -m venv .venv-audio
@@ -143,7 +142,7 @@ docker rm -f ocr-debug
 
 ```text
 data/bin/
-├── metadata_audio.json   # transcript + score từng câu thoại, theo từng clip (audio_processing.py)
+├── metadata_audio.json   # transcript + score + timestamp từng câu thoại, theo từng video (audio_processing.py)
 ├── metadata.json         # metadata clip theo đúng thứ tự vector trong index.faiss (video_processing.py)
 ├── index.faiss           # FAISS IndexFlatIP chứa embedding từng clip (video_processing.py)
 └── metadata_ocr.json      # text + score OCR theo từng clip (ocr_processing.py)
